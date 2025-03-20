@@ -249,12 +249,20 @@
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            height: 100vh; /* 修改为100vh，使卡片高度等于视口高度 */
+            height: 400px; /* 从100vh改为合理的固定高度 */
             flex: 1;
             min-width: 280px;
             max-width: calc(50% - 20px);
         }
+        /* 删除按钮样式 */
+        #delete-btn {
+            background-color: #e74c3c;
+            margin-left: 10px;
+        }
 
+        #delete-btn:hover {
+            background-color: #c0392b;
+        }
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
@@ -699,12 +707,15 @@
             
             <!-- 详细内容视图 (初始隐藏) -->
             <div class="detail-view" id="detail-view">
+                <!-- <button id="delete-btn" class="edit-btn" style="background-color: #e74c3c;">削除</button> -->
                 <div class="detail-header">
                     <button id="back-button">← 戻る</button>
                     <h2 id="detail-title">章のタイトル</h2>
                     <button id="edit-btn" class="edit-btn">編集</button>
                     <button id="save-btn" class="edit-btn" style="display: none;">保存</button>
                     <button id="cancel-btn" class="edit-btn" style="display: none;">取消</button>
+                    <!-- 添加删除按钮 -->
+                    <button id="delete-btn" class="edit-btn" style="background-color: #e74c3c; display: none;">削除</button>
                 </div>
                 <div class="detail-content" id="detail-content">
 
@@ -826,25 +837,86 @@ function れい() {
         const sectionContentInput = document.getElementById('section-content');
         const tocList = document.getElementById('toc-list');
         const contentDataDiv = document.getElementById('content-data');
-        
-            // 初始化现有卡片的滚动指示器
-            document.querySelectorAll('.card-content').forEach(cardContent => {
-                if (cardContent.scrollHeight > cardContent.clientHeight) {
-                    cardContent.classList.add('scrollable');
-                }
-            });
+        const deleteButton = document.getElementById('delete-btn');
+        // 初始化现有卡片的滚动指示器
+        document.querySelectorAll('.card-content').forEach(cardContent => {
+            if (cardContent.scrollHeight > cardContent.clientHeight) {
+                cardContent.classList.add('scrollable');
+            }
+        });
             // 存储编辑前的内容
             let beforeEditContent = '';
 
             // 存储修改后的内容
             const modifiedContent = {};
-
+            // 重要：先加载修改内容
+            loadModifiedContent();
             // 从本地存储加载修改内容
+            // 5. 修改saveToLocalStorage函数以支持删除操作
+            function saveToLocalStorage() {
+                try {
+                    // 只保存修改后的内容，不保存已删除的内容
+                    localStorage.setItem('modifiedSections', JSON.stringify(modifiedContent));
+                    console.log('保存成功，已保存章节数量:', Object.keys(modifiedContent).length);
+                    return true;
+                } catch (error) {
+                    console.error("保存到本地存储错误:", error);
+                    showStatus("内容の保存中にエラーが発生しました", "error");
+                    return false;
+                }
+            }
+            function deleteSection(sectionId) {
+                if (!sectionId || sectionId.startsWith('section') === false) {
+                    console.error('无效的章节ID:', sectionId);
+                    return false;
+                }
+
+                // 确保不删除内置的初始章节（section1-section4）
+                if (['section1', 'section2', 'section3', 'section4'].includes(sectionId)) {
+                    showStatus("初期章節は削除できません", "error");
+                    return false;
+                }
+
+                try {
+                    // 1. 删除内容数据
+                    const contentElement = document.getElementById(sectionId);
+                    if (contentElement) {
+                        contentElement.remove();
+                    }
+
+                    // 2. 删除卡片
+                    const cardElement = document.querySelector(`.card[data-section="${sectionId}"]`);
+                    if (cardElement) {
+                        cardElement.remove();
+                    }
+
+                    // 3. 删除目录项
+                    const tocItem = document.querySelector(`#toc-list li[data-target="${sectionId}"]`);
+                    if (tocItem) {
+                        tocItem.remove();
+                    }
+
+                    // 4. 从内存中删除内容
+                    delete originalContent[sectionId];
+                    delete modifiedContent[sectionId];
+                    delete processedContent[sectionId];
+
+                    // 5. 从本地存储中删除
+                    saveToLocalStorage();
+
+                    return true;
+                } catch (error) {
+                    console.error("删除章节错误:", error);
+                    return false;
+                }
+            }
+            // 3. 增强加载修改内容的函数
             function loadModifiedContent() {
                 try {
                     const saved = localStorage.getItem('modifiedSections');
                     if (saved) {
                         const parsed = JSON.parse(saved);
+                        console.log('从本地存储加载章节，总数:', Object.keys(parsed).length);
                         
                         // 遍历所有保存的内容，确保不包含振假名标签
                         for (const id in parsed) {
@@ -858,15 +930,56 @@ function れい() {
                             // 重置对应的处理内容，这样会在下次显示时重新处理
                             delete processedContent[id];
                             
-                            // 更新预览卡片 - 添加这一行
-                            updateCardPreview(id, cleanContent);
+                            // 检查内容是否存在，如果不存在则创建
+                            if (!document.getElementById(id)) {
+                                const contentDiv = document.createElement('div');
+                                contentDiv.id = id;
+                                contentDiv.innerHTML = cleanContent;
+                                contentDataDiv.appendChild(contentDiv);
+                            }
+                            
+                            // 检查卡片是否存在，如果不存在则创建
+                            const existingCard = document.querySelector(`.card[data-section="${id}"]`);
+                            if (!existingCard) {
+                                createCardForSection(id, cleanContent);
+                            } else {
+                                // 更新现有卡片
+                                updateCardPreview(id, cleanContent);
+                            }
+                            
+                            // 检查TOC项是否存在，如果不存在则添加
+                            const existingTocItem = document.querySelector(`#toc-list li[data-target="${id}"]`);
+                            if (!existingTocItem) {
+                                // 从内容中提取标题
+                                const tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = cleanContent;
+                                const titleEl = tempDiv.querySelector('h2');
+                                const title = titleEl ? titleEl.textContent : `章节 ${id}`;
+                                
+                                // 创建新的TOC项
+                                const liElement = document.createElement('li');
+                                liElement.setAttribute('data-target', id);
+                                liElement.innerHTML = `<a href="#${id}">${title}</a>`;
+                                
+                                // 添加事件监听
+                                liElement.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    showSection(id);
+                                    
+                                    // 高亮当前目录项
+                                    document.querySelectorAll('#toc-list li').forEach(li => {
+                                        li.classList.remove('active');
+                                    });
+                                    this.classList.add('active');
+                                });
+                                
+                                tocList.appendChild(liElement);
+                            }
                         }
-                        
-                        // 重新保存干净的内容
-                        localStorage.setItem('modifiedSections', JSON.stringify(modifiedContent));
                     }
                 } catch (error) {
                     console.error("加载修改内容错误:", error);
+                    showStatus("保存済みコンテンツの読み込み中にエラーが発生しました", "error");
                 }
             }
                         // 存储当前章节ID
@@ -995,7 +1108,28 @@ function れい() {
                 // 显示模态框
                 addSectionModal.classList.add('active');
             });
-            // 表单提交事件
+            // 4. 添加删除按钮点击事件
+            deleteButton.addEventListener('click', function() {
+                if (!currentSectionId) return;
+
+                // 确保不删除内置章节
+                if (['section1', 'section2', 'section3', 'section4'].includes(currentSectionId)) {
+                    showStatus("初期章節は削除できません", "error");
+                    return;
+                }
+
+                // 显示确认对话框
+                if (confirm('この章を完全に削除しますか？この操作は取り消せません。')) {
+                    if (deleteSection(currentSectionId)) {
+                        // 删除成功，返回卡片视图
+                        showStatus("章が正常に削除されました", "success");
+                        backButton.click(); // 返回卡片视图
+                    } else {
+                        showStatus("章の削除中にエラーが発生しました", "error");
+                    }
+                }
+            });
+            // 5. 改进添加新章节事件，确保添加后同步保存
             addSectionForm.addEventListener('submit', function(event) {
                 event.preventDefault();
                 
@@ -1037,11 +1171,15 @@ function れい() {
                 sectionDiv.innerHTML = content;
                 contentDataDiv.appendChild(sectionDiv);
                 
-                // 将新内容添加到原始内容对象中
+                // 将新内容添加到原始内容和修改后内容对象中
                 originalContent[sectionId] = content;
+                modifiedContent[sectionId] = content;
                 
                 // 创建新卡片
                 createCardForSection(sectionId, content);
+                
+                // 立即保存到本地存储
+                saveToLocalStorage();
                 
                 // 如果振假名功能已启用，则处理新内容
                 if (mecabReady) {
@@ -1050,20 +1188,22 @@ function れい() {
                     });
                 }
                 
-                // 保存到本地存储
-                try {
-                    modifiedContent[sectionId] = content;
-                    localStorage.setItem('modifiedSections', JSON.stringify(modifiedContent));
-                } catch (error) {
-                    console.error("保存新章节内容错误:", error);
-                    showStatus("内容の保存中にエラーが発生しました", "error");
-                }
-                
                 // 关闭模态框
                 addSectionModal.classList.remove('active');
                 
                 // 显示成功状态
                 showStatus("新しい章が追加されました", "success");
+            });
+
+            // 6. 添加页面关闭前自动保存功能
+            window.addEventListener('beforeunload', function() {
+                // 如果正在编辑，自动保存当前内容
+                if (detailContent.contentEditable === 'true' && currentSectionId) {
+                    const cleanContent = removeRubyTags(detailContent.innerHTML);
+                    originalContent[currentSectionId] = cleanContent;
+                    modifiedContent[currentSectionId] = cleanContent;
+                    saveToLocalStorage();
+                }
             });
             // 模态框取消按钮点击事件
             modalCancelBtn.addEventListener('click', function() {
@@ -1148,7 +1288,7 @@ function れい() {
             });
 
             // 保存按钮点击事件
-            // 保存按钮点击事件
+            // 4. 改进保存按钮点击事件，确保同步保存
             saveButton.addEventListener('click', async function() {
                 // 禁用编辑模式
                 detailContent.contentEditable = false;
@@ -1156,21 +1296,15 @@ function れい() {
                 
                 // 保存修改后的内容
                 if (currentSectionId) {
-                    // 移除所有振り仮名标记，保存纯文本内容
+                    // 移除所有振假名标记，保存纯文本内容
                     const cleanContent = removeRubyTags(detailContent.innerHTML);
 
                     // 将修改后的内容保存到原始内容和修改内容对象中
                     originalContent[currentSectionId] = cleanContent;
                     modifiedContent[currentSectionId] = cleanContent;
                     
-                    // 保存到本地存储
-                    try {
-                        localStorage.setItem('modifiedSections', JSON.stringify(modifiedContent));
-                    } catch (error) {
-                        console.error("保存修改内容错误:", error);
-                        showStatus("内容の保存中にエラーが発生しました", "error");
-                        return;
-                    }
+                    // 立即保存到本地存储
+                    saveToLocalStorage();
                     
                     // 清除对应的处理内容，后续会重新处理
                     delete processedContent[currentSectionId];
@@ -1215,7 +1349,7 @@ function れい() {
                 
                 showStatus("編集がキャンセルされました", "info");
             });
-            // 创建新章节的卡片
+            // 7. 改进创建卡片函数，优化卡片滚动显示
             function createCardForSection(sectionId, content) {
                 const cardDiv = document.createElement('div');
                 cardDiv.className = 'card';
@@ -1225,7 +1359,7 @@ function れい() {
                 cardDiv.innerHTML = `
                     <div class="card-content">
                         <h3>Loading...</h3>
-                        <p>Loading...</p>
+                        <p></p>
                     </div>
                     <div class="card-title">Loading...</div>
                 `;
@@ -1239,11 +1373,14 @@ function れい() {
                 // 插入到添加按钮之前
                 cardView.insertBefore(cardDiv, addSectionButton);
                 
-                // 更新卡片预览
+                // 更新卡片预览，使用新的方法显示完整内容
                 updateCardPreview(sectionId, content);
+                
+                return cardDiv;
             }
             // 新增：更新预览卡片的函数
             // 新增：更新预览卡片的函数
+            // 1. 改进卡片预览更新函数，保留原始格式并支持滚动
             function updateCardPreview(sectionId, content) {
                 // 查找对应的卡片
                 const card = document.querySelector(`.card[data-section="${sectionId}"]`);
@@ -1252,7 +1389,7 @@ function れい() {
                     return;
                 }
                 
-                // 解析内容，提取标题和摘要
+                // 解析内容，提取标题和内容
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = content;
                 
@@ -1263,14 +1400,12 @@ function れい() {
                     const cardTitle = card.querySelector('.card-title');
                     if (cardTitle) {
                         const titleText = h2.textContent.replace(/^第.*章：/, '');
-                        console.log('更新卡片标题为:', titleText);
                         cardTitle.textContent = titleText;
                     }
                     
                     // 更新卡片内容标题
                     const cardContentTitle = card.querySelector('.card-content h3');
                     if (cardContentTitle) {
-                        console.log('更新卡片内容标题为:', h2.textContent);
                         cardContentTitle.textContent = h2.textContent;
                     }
                 }
@@ -1279,33 +1414,17 @@ function れい() {
                 const cardContentP = card.querySelector('.card-content p');
                 if (!cardContentP) return;
                 
-                // 清空现有内容
-                cardContentP.innerHTML = '';
-                
-                // 创建一个文档片段来存储预览内容
-                const fragment = document.createDocumentFragment();
-                
-                // 获取所有段落和其他元素
+                // 获取所有内容节点（除了标题）
                 const contentNodes = Array.from(tempDiv.children).filter(node => node.tagName !== 'H2');
                 
-                // 遍历并添加内容元素，保留格式
-                for (let i = 0; i < contentNodes.length; i++) {
-                    const node = contentNodes[i];
-                    
-                    // 复制节点以保留格式
-                    const clonedNode = node.cloneNode(true);
-                    
-                    // 添加到文档片段
-                    fragment.appendChild(clonedNode);
-                }
-                
-                // 将处理后的内容添加到卡片
-                cardContentP.appendChild(fragment);
+                // 清空现有内容并添加所有内容，保留原始格式
+                cardContentP.innerHTML = '';
+                contentNodes.forEach(node => {
+                    cardContentP.appendChild(node.cloneNode(true));
+                });
                 
                 // 检查内容是否需要滚动
                 const cardContent = card.querySelector('.card-content');
-                
-                // 使用setTimeout确保DOM渲染完成后再检查滚动
                 setTimeout(() => {
                     if (cardContent.scrollHeight > cardContent.clientHeight) {
                         cardContent.classList.add('scrollable');
@@ -1313,8 +1432,6 @@ function れい() {
                         cardContent.classList.remove('scrollable');
                     }
                 }, 0);
-                
-                console.log('更新卡片预览完成');
             }
             // 执行搜索
             function performSearch() {
@@ -1431,11 +1548,12 @@ function れい() {
                 }
             });
             
-            // 显示章节内容
+            // 6. 在显示章节时检查是否存在（避免显示已删除的章节）
             function showSection(sectionId) {
                 const section = document.getElementById(sectionId);
                 if (!section) {
                     console.error('找不到章节:', sectionId);
+                    showStatus("要求された章が見つかりません", "error");
                     return;
                 }
                 
@@ -1444,6 +1562,13 @@ function れい() {
                 
                 // 设置标题
                 detailTitle.textContent = section.querySelector('h2').textContent;
+                
+                // 根据是否为默认章节显示或隐藏删除按钮
+                if (['section1', 'section2', 'section3', 'section4'].includes(sectionId)) {
+                    deleteButton.style.display = 'none'; // 隐藏删除按钮
+                } else {
+                    deleteButton.style.display = 'inline-block'; // 显示删除按钮
+                }
                 
                 // 根据振假名状态决定显示哪个版本的内容
                 if (furiganaEnabled && processedContent[sectionId]) {
