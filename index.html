@@ -986,35 +986,63 @@ function れい() {
                     }
                 }
                 
-                // 获取所有段落并组合成摘要
-                const paragraphs = tempDiv.querySelectorAll('p');
+                // 获取卡片内容区域的段落元素
                 const cardContentP = card.querySelector('.card-content p');
+                if (!cardContentP) return;
                 
-                if (cardContentP && paragraphs.length > 0) {
-                    let combinedText = '';
-                    const maxLength = 5500; // 摘要最大长度
+                // 清空现有内容
+                cardContentP.innerHTML = '';
+                
+                // 创建一个文档片段来存储预览内容
+                const fragment = document.createDocumentFragment();
+                
+                // 获取所有段落和其他元素
+                const contentNodes = Array.from(tempDiv.children).filter(node => node.tagName !== 'H2');
+                
+                // 预览内容的最大高度限制(字符数)
+                const maxLength = 5500;
+                let totalLength = 0;
+                let hasMore = false;
+                
+                // 遍历并添加内容元素，保留格式
+                for (let i = 0; i < contentNodes.length; i++) {
+                    const node = contentNodes[i];
                     
-                    // 合并段落，直到达到最大长度
-                    for (const p of paragraphs) {
-                        if (p.textContent.trim()) { // 只处理非空段落
-                            if (combinedText) combinedText += ' '; // 添加段落间的空格
-                            combinedText += p.textContent.trim();
-                            
-                            // 一旦达到足够的长度就停止
-                            if (combinedText.length >= maxLength) {
-                                break;
+                    // 复制节点以保留格式
+                    const clonedNode = node.cloneNode(true);
+                    
+                    // 检查是否已达到最大长度
+                    totalLength += clonedNode.textContent.length;
+                    if (totalLength > maxLength) {
+                        hasMore = true;
+                        // 如果当前节点是段落，可以尝试截断段落而不是完全跳过
+                        if (clonedNode.tagName === 'P') {
+                            const remainingLength = maxLength - (totalLength - clonedNode.textContent.length);
+                            if (remainingLength > 20) { // 确保至少显示一部分内容
+                                clonedNode.textContent = clonedNode.textContent.substring(0, remainingLength) + '...';
+                                fragment.appendChild(clonedNode);
                             }
                         }
+                        break;
                     }
                     
-                    // 限制摘要长度
-                    if (combinedText.length > maxLength) {
-                        combinedText = combinedText.substring(0, maxLength) + '...';
-                    }
-                    
-                    console.log('更新卡片摘要为:', combinedText);
-                    cardContentP.textContent = combinedText;
+                    // 添加到文档片段
+                    fragment.appendChild(clonedNode);
                 }
+                
+                // 如果内容被截断且最后一个元素不是显示"更多"的元素，添加一个
+                if (hasMore && fragment.lastChild && fragment.lastChild.textContent.indexOf('...') === -1) {
+                    const moreEl = document.createElement('div');
+                    moreEl.textContent = '...';
+                    moreEl.style.fontStyle = 'italic';
+                    moreEl.style.color = '#888';
+                    fragment.appendChild(moreEl);
+                }
+                
+                // 将处理后的内容添加到卡片
+                cardContentP.appendChild(fragment);
+                
+                console.log('更新卡片预览完成');
             }
             // 执行搜索
             function performSearch() {
