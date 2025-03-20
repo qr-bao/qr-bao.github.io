@@ -954,6 +954,7 @@ function れい() {
                 showStatus("編集がキャンセルされました", "info");
             });
             // 新增：更新预览卡片的函数
+            // 新增：更新预览卡片的函数
             function updateCardPreview(sectionId, content) {
                 // 查找对应的卡片
                 const card = document.querySelector(`.card[data-section="${sectionId}"]`);
@@ -985,19 +986,34 @@ function れい() {
                     }
                 }
                 
-                // 获取第一段文本作为摘要
-                const firstP = tempDiv.querySelector('p');
-                if (firstP) {
-                    const cardContentP = card.querySelector('.card-content p');
-                    if (cardContentP) {
-                        // 限制摘要长度
-                        let summary = firstP.textContent;
-                        if (summary.length > 120) {
-                            summary = summary.substring(0, 120) + '...';
+                // 获取所有段落并组合成摘要
+                const paragraphs = tempDiv.querySelectorAll('p');
+                const cardContentP = card.querySelector('.card-content p');
+                
+                if (cardContentP && paragraphs.length > 0) {
+                    let combinedText = '';
+                    const maxLength = 150; // 摘要最大长度
+                    
+                    // 合并段落，直到达到最大长度
+                    for (const p of paragraphs) {
+                        if (p.textContent.trim()) { // 只处理非空段落
+                            if (combinedText) combinedText += ' '; // 添加段落间的空格
+                            combinedText += p.textContent.trim();
+                            
+                            // 一旦达到足够的长度就停止
+                            if (combinedText.length >= maxLength) {
+                                break;
+                            }
                         }
-                        console.log('更新卡片摘要为:', summary);
-                        cardContentP.textContent = summary;
                     }
+                    
+                    // 限制摘要长度
+                    if (combinedText.length > maxLength) {
+                        combinedText = combinedText.substring(0, maxLength) + '...';
+                    }
+                    
+                    console.log('更新卡片摘要为:', combinedText);
+                    cardContentP.textContent = combinedText;
                 }
             }
             // 执行搜索
