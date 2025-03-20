@@ -1,11 +1,1332 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>我的GitHub Pages网站</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本語文書ブラウザ</title>
+    <style>
+        /* 基本样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', Meiryo, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        /* 振り仮名样式 */
+        ruby {
+            ruby-align: center;
+        }
+        
+        rt {
+            font-size: 0.6em;
+            color: #666;
+            line-height: 1.2;
+        }
+
+        /* 容器布局 */
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 720px;
+            background-color: #fff;
+            border-right: 1px solid #e0e0e0;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 搜索框样式 */
+        .search-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .search-container input {
+            flex-grow: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            font-size: 14px;
+        }
+
+        .search-container button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            padding: 0 12px;
+            cursor: pointer;
+        }
+
+        /* 目录样式 */
+        .toc {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .toc h2 {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 18px;
+        }
+
+        .toc ul {
+            list-style: none;
+        }
+
+        .toc li {
+            margin-bottom: 10px;
+        }
+
+        .toc a {
+            text-decoration: none;
+            color: #333;
+            display: block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .toc a:hover {
+            background-color: #f0f7ff;
+        }
+
+        .toc li.active a {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            font-weight: bold;
+        }
+
+        /* 内容区域样式 */
+        .content {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 卡片视图样式 */
+        .card-view {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+            padding: 0 15px;
+            box-sizing: border-box;
+            flex-grow: 1;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: auto;
+            min-height: 150px;
+            flex: 1;
+            min-width: 280px;
+            max-width: calc(50% - 20px);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-content {
+            padding: 15px;
+            flex-grow: 1;
+            overflow: visible;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-content h3 {
+            margin-bottom: 8px;
+            color: #1565c0;
+            font-size: 1.1em;
+        }
+
+        .card-content p {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.5;
+            flex-grow: 1;
+            margin: 0;
+            overflow: visible;
+            display: block;
+            word-break: break-word;
+        }
+
+        .card-title {
+            background-color: #f5f5f5;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+            border-top: 1px solid #eee;
+            font-size: 0.95em;
+        }
+
+        /* 详细内容视图样式 */
+        .detail-view {
+            display: none;
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .detail-view.active {
+            display: block;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #eee;
+        }
+
+        .detail-header button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            margin-right: 20px;
+        }
+
+        .detail-header h2 {
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .detail-content {
+            padding: 30px;
+            line-height: 1.8;
+        }
+
+        .detail-content h2 {
+            margin-bottom: 20px;
+            color: #1565c0;
+        }
+
+        .detail-content h3 {
+            margin: 25px 0 15px;
+            color: #333;
+        }
+
+        .detail-content p {
+            margin-bottom: 15px;
+        }
+
+        .detail-content ul, .detail-content ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+
+        .detail-content li {
+            margin-bottom: 10px;
+        }
+
+        .detail-content pre {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .detail-content code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* 振假名控制区域样式 */
+        .furigana-control-panel {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .furigana-control-panel h3 {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .option-group {
+            margin-bottom: 10px;
+        }
+
+        .option-group label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .option-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        /* 振假名控制区域内のボタンレイアウト調整 */
+        .furigana-controls {
+            display: flex;
+            flex-wrap: wrap; /* ボタンが入りきらない場合は折り返す */
+            gap: 10px; /* ボタン間の間隔 */
+        }
+
+        .furigana-controls button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            margin-right: 0; /* margin-rightを0に変更し、gapで間隔を取る */
+            margin-top: 0; /* margin-topも0に変更し、gapで間隔を取る */
+            white-space: nowrap; /* ボタンテキストの折り返しを防止 */
+        }
+
+        .furigana-controls button:hover {
+            background-color: #3a76d8;
+        }
+
+        .furigana-controls button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        /* 编辑按钮样式 */
+        .edit-btn {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .edit-btn:hover {
+            background-color: #3a76d8;
+        }
+
+        /* 内容编辑状态样式 */
+        .detail-content.editing {
+            background-color: #f9f9ff;
+            border: 1px solid #4a90e2;
+            border-radius: 4px;
+            padding: 15px;
+            outline: none;
+        }
+
+        /* 状态提示样式 */
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            text-align: center;
+            transition: opacity 0.3s;
+            opacity: 0;
+        }
+
+        .status.visible {
+            opacity: 1;
+        }
+
+        .status.success {
+            background-color: #e7f7e7;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .status.error {
+            background-color: #fdecea;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .status.info {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #bbdefb;
+        }
+
+        /* 响应式设计 */
+        @media (min-width: 1201px) {
+            .card {
+                max-width: calc(25% - 20px);
+            }
+        }
+        
+        @media (min-width: 901px) and (max-width: 1200px) {
+            .card {
+                max-width: calc(33.333% - 20px);
+            }
+        }
+        
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                min-height: auto; /* 追加: モバイルビューでは高さを制限しない */
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+                padding: 15px;
+            }
+            
+            .sidebar .search-container,
+            .sidebar .toc h2,
+            .sidebar .furigana-control-panel h3 {
+                margin-bottom: 10px;
+            }
+            
+            .search-container input,
+            .search-container button {
+                height: 38px;
+            }
+            
+            .toc li {
+                margin-bottom: 5px;
+            }
+            
+            .card-view {
+                padding: 10px;
+            }
+            
+            .card {
+                max-width: calc(50% - 10px);
+            }
+            
+            .card-content {
+                padding: 12px;
+            }
+            
+            .card-content h3 {
+                font-size: 1em;
+                margin-bottom: 5px;
+            }
+            
+            .card-title {
+                padding: 6px;
+            }
+            
+            .detail-content {
+                padding: 15px;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .card {
+                max-width: 100%;
+            }
+            
+            .detail-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .detail-header button {
+                margin-bottom: 10px;
+                margin-right: 0;
+            }
+            
+            .detail-header h2 {
+                font-size: 1.2em;
+            }
+            
+            .detail-content h2 {
+                font-size: 1.3em;
+            }
+            
+            .detail-content h3 {
+                font-size: 1.1em;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Hello, World!</h1>
-    <p>我的第一个GitHub Pages网站已成功部署！</p>
+    <div class="container">
+        <!-- 左侧目录区域 -->
+        <aside class="sidebar">
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="文書を検索...">
+                <button id="search-button">🔍</button>
+            </div>
+            <nav class="toc">
+                <h2>目次</h2>
+                <ul id="toc-list">
+                    <li data-target="section1"><a href="#section1">第一章：はじめに</a></li>
+                    <li data-target="section2"><a href="#section2">第二章：基礎概念</a></li>
+                    <li data-target="section3"><a href="#section3">第三章：応用技術</a></li>
+                    <li data-target="section4"><a href="#section4">第四章：実践例</a></li>
+                </ul>
+            </nav>
+            
+            <!-- 振假名控制区域 -->
+            <div class="furigana-control-panel">
+                <h3>振り仮名設定</h3>
+                <div class="option-group">
+                    <label>
+                        <input type="checkbox" id="use-hiragana" checked> 
+                        平仮名使用（片仮名より）
+                    </label>
+                </div>
+                <div class="option-group">
+                    <label>
+                        <input type="checkbox" id="annotate-all"> 
+                        全ての単語を注釈
+                    </label>
+                </div>
+                <div class="furigana-controls">
+                    <button id="apply-furigana">振り仮名表示</button>
+                    <button id="reset-furigana">原文表示</button>
+                </div>
+                <div class="status" id="mecab-status">MeCab: 初期化中...</div>
+            </div>
+        </aside>
+
+        <!-- 右侧内容区域 -->
+        <main class="content">
+            <!-- 卡片预览模式 -->
+            <div class="card-view" id="card-view">
+                <div class="card" data-section="section1">
+                    <div class="card-content">
+                        <h3>第一章：はじめに</h3>
+                        <p>日本語のテキストを読むためのシステムです。この書類では、日本語の学習に役立つ機能を提供します。この紹介部分には、目的と背景、内容の概要などが含まれています。</p>
+                    </div>
+                    <div class="card-title">はじめに</div>
+                </div>
+                <div class="card" data-section="section2">
+                    <div class="card-content">
+                        <h3>第二章：基礎概念</h3>
+                        <p>これは第二章の詳細内容です。ここでは基礎概念と原理を紹介しており、後記章を理解するための基礎となります。基礎概念には概念１と概念２が含まれます。</p>
+                    </div>
+                    <div class="card-title">基礎概念</div>
+                </div>
+                <div class="card" data-section="section3">
+                    <div class="card-content">
+                        <h3>第三章：応用技術</h3>
+                        <p>これは第三章の詳細内容です。ここではいくつかの応用技術と方法を紹介しています。応用技術には「最適化方法」と「拡張機能」などが含まれます。</p>
+                    </div>
+                    <div class="card-title">応用技術</div>
+                </div>
+                <div class="card" data-section="section4">
+                    <div class="card-content">
+                        <h3>第四章：実践例</h3>
+                        <p>これは第四章の詳細内容です。ここでは実際の事例を通して、前に紹介した概念と技術の応用を示します。簡単な応用例と複雑なシステム例が含まれます。</p>
+                    </div>
+                    <div class="card-title">実践例</div>
+                </div>
+            </div>
+            
+            <!-- 详细内容视图 (初始隐藏) -->
+            <div class="detail-view" id="detail-view">
+                <div class="detail-header">
+                    <button id="back-button">← 戻る</button>
+                    <h2 id="detail-title">章のタイトル</h2>
+                    <button id="edit-btn" class="edit-btn">編集</button>
+                    <button id="save-btn" class="edit-btn" style="display: none;">保存</button>
+                    <button id="cancel-btn" class="edit-btn" style="display: none;">取消</button>
+                </div>
+                <div class="detail-content" id="detail-content">
+
+                    <!-- 详细内容将动态加载到这里 -->
+                </div>
+                <div class="status" id="status"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 原始内容数据 -->
+    <div id="content-data" style="display:none;">
+        <div id="section1">
+            <h2>第一章：はじめに</h2>
+            <p>日本語のテキストを読むためのシステムです。この書類では、日本語の学習に役立つ機能を提供します。</p>
+            <p>この紹介部分には、次のような内容が含まれています：</p>
+            <ul>
+                <li>目的と背景</li>
+                <li>主要内容の概要</li>
+                <li>予想される読者</li>
+                <li>この書類の使い方</li>
+            </ul>
+            <p>この部分は長文になることがあり、多くの段落や節が含まれるかもしれません。</p>
+        </div>
+        <div id="section2">
+            <h2>第二章：基礎概念</h2>
+            <p>これは第二章の詳細内容です。ここでは基礎概念と原理を紹介しており、後記章を理解するための基礎となります。</p>
+            <p>基礎概念には次のものが含まれます：</p>
+            <ol>
+                <li>
+                    <h3>概念１</h3>
+                    <p>概念１についての詳細な説明。この概念は全体体系を理解するための基礎です。</p>
+                </li>
+                <li>
+                    <h3>概念２</h3>
+                    <p>概念２についての詳細な説明。この概念は概念１の基礎の上に構築されています。</p>
+                </li>
+            </ol>
+            <p>これらの基礎概念を理解した後、より複雑な応用技術に進むことができます。</p>
+        </div>
+        <div id="section3">
+            <h2>第三章：応用技術</h2>
+            <p>これは第三章の詳細内容です。ここではいくつかの応用技術と方法を紹介しています。</p>
+            <p>応用技術には主に次のような側面が含まれます：</p>
+            <h3>技術１：最適化方法</h3>
+            <p>この部分では最適化方法の原理と応用について詳細に紹介しています。</p>
+            <p>最適化方法は次のような側面から行うことができます：</p>
+            <ul>
+                <li>空間最適化</li>
+                <li>時間最適化</li>
+                <li>資源利用最適化</li>
+            </ul>
+            <h3>技術２：拡張機能</h3>
+            <p>この部分ではシステム機能を拡張し、より複雑な応用場面に適応させる方法を紹介しています。</p>
+        </div>
+        <div id="section4">
+            <h2>第四章：実践例</h2>
+            <p>これは第四章の詳細内容です。ここでは実際の事例を通して、前に紹介した概念と技術の応用を示します。</p>
+            <h3>事例１：簡単な応用</h3>
+            <p>この事例は基礎概念を簡単な場面で応用する方法を示しています。</p>
+            <pre><code>// サンプルコード
+function れい() {
+    console.log("これはサンプル関数です");
+    return "サンプル結果";
+}</code></pre>
+            <h3>事例２：複雑なシステム</h3>
+            <p>この事例では複雑なシステムで様々な技術を応用する方法を紹介しています。</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import Mecab from "https://unpkg.com/mecab-wasm@1.0.2/lib/mecab.js";
+        
+        document.addEventListener('DOMContentLoaded', function() {
+        // DOM元素
+        const cardView = document.getElementById('card-view');
+        const detailView = document.getElementById('detail-view');
+        const detailTitle = document.getElementById('detail-title');
+        const detailContent = document.getElementById('detail-content');
+        const backButton = document.getElementById('back-button');
+        const useHiraganaCheckbox = document.getElementById('use-hiragana');
+        const annotateAllCheckbox = document.getElementById('annotate-all');
+        const applyFuriganaButton = document.getElementById('apply-furigana');
+        const resetFuriganaButton = document.getElementById('reset-furigana');
+        const mecabStatusElement = document.getElementById('mecab-status');
+        // 编辑相关的DOM元素
+        const editButton = document.getElementById('edit-btn');
+        const saveButton = document.getElementById('save-btn');
+        const cancelButton = document.getElementById('cancel-btn');
+        const statusElement = document.getElementById('status');
+        // 搜索相关的DOM元素
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+
+
+            // 存储编辑前的内容
+            let beforeEditContent = '';
+
+            // 存储修改后的内容
+            const modifiedContent = {};
+
+            // 从本地存储加载修改内容
+            function loadModifiedContent() {
+                try {
+                    const saved = localStorage.getItem('modifiedSections');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        
+                        // 遍历所有保存的内容，确保不包含振假名标签
+                        for (const id in parsed) {
+                            // 清理可能存在的振假名标签
+                            const cleanContent = removeRubyTags(parsed[id]);
+                            
+                            // 更新原始内容对象
+                            originalContent[id] = cleanContent;
+                            modifiedContent[id] = cleanContent;
+                            
+                            // 重置对应的处理内容，这样会在下次显示时重新处理
+                            delete processedContent[id];
+                            
+                            // 更新预览卡片 - 添加这一行
+                            updateCardPreview(id, cleanContent);
+                        }
+                        
+                        // 重新保存干净的内容
+                        localStorage.setItem('modifiedSections', JSON.stringify(modifiedContent));
+                    }
+                } catch (error) {
+                    console.error("加载修改内容错误:", error);
+                }
+            }
+                        // 存储当前章节ID
+            let currentSectionId = null;
+            
+            // 存储原始章节内容和已处理内容
+            const originalContent = {};
+            const processedContent = {};
+            document.querySelectorAll('#content-data > div').forEach(div => {
+                originalContent[div.id] = div.innerHTML;
+            });
+            
+            // MeCab初始化状态
+            let mecabReady = false;
+            // 默认启用振假名
+            let furiganaEnabled = true;
+            async function preprocessSection(sectionId) {
+                if (!originalContent[sectionId] || !mecabReady) return;
+                
+                const useHiragana = useHiraganaCheckbox.checked;
+                const annotateAll = annotateAllCheckbox.checked;
+                
+                // 创建临时DOM元素来处理HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = originalContent[sectionId];
+                
+                // 获取文本节点
+                const textNodes = getTextNodes(tempDiv);
+                
+                // 处理每个文本节点
+                for (const node of textNodes) {
+                    const text = node.nodeValue.trim();
+                    if (text) {
+                        try {
+                            // 使用MeCab分析文本
+                            const analysisResults = Mecab.query(text);
+                            
+                            // 生成带振假名的HTML
+                            const html = generateFuriganaHTML(analysisResults, useHiragana, annotateAll);
+                            
+                            // 创建临时元素
+                            const span = document.createElement('span');
+                            span.innerHTML = html;
+                            
+                            // 替换文本节点
+                            node.parentNode.replaceChild(span, node);
+                        } catch (error) {
+                            console.error("预处理中分析错误:", error, "文本:", text);
+                        }
+                    }
+                }
+                
+                // 保存处理后的内容
+                processedContent[sectionId] = tempDiv.innerHTML;
+            }
+            // 初始化MeCab
+            async function initMeCab() {
+                mecabStatusElement.textContent = "MeCab: 加载中...";
+                applyFuriganaButton.disabled = true;
+                
+                try {
+                    // 等待MeCab初始化完成
+                    await Mecab.waitReady();
+                    mecabReady = true;
+                    mecabStatusElement.textContent = "MeCab: 准备完成";
+                    applyFuriganaButton.disabled = false;
+                    
+                    // MeCab准备好后，预处理所有章节的内容
+                    await preprocessAllSections();
+                } catch (error) {
+                    mecabStatusElement.textContent = "MeCab: 加载失败 - " + error.message;
+                    console.error("MeCab初始化错误:", error);
+                }
+            }
+            
+            // 预处理所有章节内容，添加振假名
+            // 预处理所有章节内容，添加振假名
+            async function preprocessAllSections() {
+                mecabStatusElement.textContent = "MeCab: 正在预处理内容...";
+                
+                const useHiragana = useHiraganaCheckbox.checked;
+                const annotateAll = annotateAllCheckbox.checked;
+                
+                // 处理每个章节
+                for (const sectionId in originalContent) {
+                    // 创建临时DOM元素来处理HTML
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = originalContent[sectionId];
+                    
+                    // 获取文本节点
+                    const textNodes = getTextNodes(tempDiv);
+                    
+                    // 处理每个文本节点
+                    for (const node of textNodes) {
+                        const text = node.nodeValue.trim();
+                        if (text) {
+                            try {
+                                // 使用MeCab分析文本
+                                const analysisResults = Mecab.query(text);
+                                
+                                // 生成带振假名的HTML
+                                const html = generateFuriganaHTML(analysisResults, useHiragana, annotateAll);
+                                
+                                // 创建临时元素
+                                const span = document.createElement('span');
+                                span.innerHTML = html;
+                                
+                                // 替换文本节点
+                                node.parentNode.replaceChild(span, node);
+                            } catch (error) {
+                                console.error("预处理中分析错误:", error, "文本:", text);
+                            }
+                        }
+                    }
+                    
+                    // 保存处理后的内容
+                    processedContent[sectionId] = tempDiv.innerHTML;
+                }
+                
+                mecabStatusElement.textContent = "MeCab: 内容预处理完成";
+            }
+                        
+            // 卡片点击事件
+            document.querySelectorAll('.card').forEach(function(card) {
+                card.addEventListener('click', function() {
+                    const sectionId = this.getAttribute('data-section');
+                    showSection(sectionId);
+                });
+            });
+            
+            // 目录项点击事件
+            document.querySelectorAll('#toc-list li').forEach(function(item) {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const sectionId = this.getAttribute('data-target');
+                    showSection(sectionId);
+                    
+                    // 高亮当前目录项
+                    document.querySelectorAll('#toc-list li').forEach(function(li) {
+                        li.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+            // 添加搜索功能 - 确保正确绑定事件
+            searchButton.addEventListener('click', function() {
+                console.log("搜索按钮被点击");  // 添加调试信息
+                performSearch();
+            });
+
+            // 添加搜索框回车键功能
+            // 添加搜索框回车键功能
+            searchInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    performSearch();
+                }
+            });
+            // 返回按钮添加清除搜索功能
+            // 返回按钮点击事件
+            backButton.addEventListener('click', function() {
+                // 修正前: cardView.style.display = 'grid';
+                // 修正後: 'flex'に変更して、flexレイアウトを維持
+                cardView.style.display = 'flex';
+                detailView.classList.remove('active');
+                
+                // 清除目录项高亮
+                document.querySelectorAll('#toc-list li').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                
+                // 清除搜索，以便显示所有卡片
+                clearSearch();
+                
+                currentSectionId = null;
+            });
+            // 编辑按钮点击事件
+            editButton.addEventListener('click', function() {
+                // 保存当前内容，用于取消操作
+                beforeEditContent = detailContent.innerHTML;
+                
+                // 启用编辑模式
+                detailContent.contentEditable = true;
+                detailContent.classList.add('editing');
+                detailContent.focus();
+                
+                // 切换按钮显示
+                editButton.style.display = 'none';
+                saveButton.style.display = 'inline-block';
+                cancelButton.style.display = 'inline-block';
+                
+                showStatus("編集モードがオンになりました", "info");
+            });
+
+            // 保存按钮点击事件
+            // 保存按钮点击事件
+            saveButton.addEventListener('click', async function() {
+                // 禁用编辑模式
+                detailContent.contentEditable = false;
+                detailContent.classList.remove('editing');
+                
+                // 保存修改后的内容
+                if (currentSectionId) {
+                    // 移除所有振り仮名标记，保存纯文本内容
+                    const cleanContent = removeRubyTags(detailContent.innerHTML);
+
+                    // 将修改后的内容保存到原始内容和修改内容对象中
+                    originalContent[currentSectionId] = cleanContent;
+                    modifiedContent[currentSectionId] = cleanContent;
+                    
+                    // 保存到本地存储
+                    try {
+                        localStorage.setItem('modifiedSections', JSON.stringify(modifiedContent));
+                    } catch (error) {
+                        console.error("保存修改内容错误:", error);
+                        showStatus("内容の保存中にエラーが発生しました", "error");
+                        return;
+                    }
+                    
+                    // 清除对应的处理内容，后续会重新处理
+                    delete processedContent[currentSectionId];
+                    
+                    // 如果振假名功能已启用，则重新处理当前内容
+                    if (furiganaEnabled && mecabReady) {
+                        showStatus("保存しました。振り仮名を処理中...", "info");
+                        
+                        await preprocessSection(currentSectionId);
+                        
+                        // 显示处理后的内容
+                        detailContent.innerHTML = processedContent[currentSectionId];
+                        showStatus("内容が保存され、振り仮名が更新されました", "success");
+                    } else {
+                        // 否则显示纯文本内容
+                        detailContent.innerHTML = cleanContent;
+                        showStatus("内容が保存されました", "success");
+                    }
+                    
+                    // 更新预览卡片内容
+                    updateCardPreview(currentSectionId, cleanContent);
+                }
+                
+                // 切换按钮显示
+                editButton.style.display = 'inline-block';
+                saveButton.style.display = 'none';
+                cancelButton.style.display = 'none';
+            });
+            // 取消按钮点击事件
+            cancelButton.addEventListener('click', function() {
+                // 恢复编辑前的内容
+                detailContent.innerHTML = beforeEditContent;
+                
+                // 禁用编辑模式
+                detailContent.contentEditable = false;
+                detailContent.classList.remove('editing');
+                
+                // 切换按钮显示
+                editButton.style.display = 'inline-block';
+                saveButton.style.display = 'none';
+                cancelButton.style.display = 'none';
+                
+                showStatus("編集がキャンセルされました", "info");
+            });
+            // 新增：更新预览卡片的函数
+            function updateCardPreview(sectionId, content) {
+                // 查找对应的卡片
+                const card = document.querySelector(`.card[data-section="${sectionId}"]`);
+                if (!card) {
+                    console.error('找不到对应卡片:', sectionId);
+                    return;
+                }
+                
+                // 解析内容，提取标题和摘要
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = content;
+                
+                // 获取标题
+                const h2 = tempDiv.querySelector('h2');
+                if (h2) {
+                    // 更新卡片标题
+                    const cardTitle = card.querySelector('.card-title');
+                    if (cardTitle) {
+                        const titleText = h2.textContent.replace(/^第.*章：/, '');
+                        console.log('更新卡片标题为:', titleText);
+                        cardTitle.textContent = titleText;
+                    }
+                    
+                    // 更新卡片内容标题
+                    const cardContentTitle = card.querySelector('.card-content h3');
+                    if (cardContentTitle) {
+                        console.log('更新卡片内容标题为:', h2.textContent);
+                        cardContentTitle.textContent = h2.textContent;
+                    }
+                }
+                
+                // 获取第一段文本作为摘要
+                const firstP = tempDiv.querySelector('p');
+                if (firstP) {
+                    const cardContentP = card.querySelector('.card-content p');
+                    if (cardContentP) {
+                        // 限制摘要长度
+                        let summary = firstP.textContent;
+                        if (summary.length > 120) {
+                            summary = summary.substring(0, 120) + '...';
+                        }
+                        console.log('更新卡片摘要为:', summary);
+                        cardContentP.textContent = summary;
+                    }
+                }
+            }
+            // 执行搜索
+            function performSearch() {
+                console.log("执行搜索");  // 添加调试信息
+                const searchText = searchInput.value.trim().toLowerCase();
+                console.log("搜索文本:", searchText);  // 添加调试信息
+                
+                if (!searchText) {
+                    console.log("搜索文本为空，显示所有卡片");  // 添加调试信息
+                    // 如果搜索框为空，显示所有卡片
+                    document.querySelectorAll('.card').forEach(card => {
+                        card.style.display = 'flex';
+                    });
+                    return;
+                }
+                
+                // 在所有内容中搜索
+                let foundResults = false;
+                
+                document.querySelectorAll('.card').forEach(card => {
+                    const sectionId = card.getAttribute('data-section');
+                    const content = originalContent[sectionId] || '';
+                    
+                    // 创建一个临时DIV来解析HTML内容并获取纯文本
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = content;
+                    const textContent = tempDiv.textContent.toLowerCase();
+                    
+                    // 检查卡片标题和内容是否包含搜索文本
+                    const cardTitle = card.querySelector('.card-title').textContent.toLowerCase();
+                    const cardContentText = card.querySelector('.card-content').textContent.toLowerCase();
+                    
+                    if (textContent.includes(searchText) || 
+                        cardTitle.includes(searchText) || 
+                        cardContentText.includes(searchText)) {
+                        card.style.display = 'flex';
+                        foundResults = true;
+                        console.log("找到匹配的卡片:", sectionId);  // 添加调试信息
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // 如果在卡片视图，确保可见
+                if (detailView.classList.contains('active')) {
+                    console.log("从详细视图返回到卡片视图");  // 添加调试信息
+                    backButton.click(); // 返回卡片视图
+                }
+                
+                // 如果没有找到结果，显示提示
+                if (!foundResults) {
+                    console.log("未找到匹配结果");  // 添加调试信息
+                    showStatus("検索結果が見つかりませんでした", "info");
+                } else {
+                    // 如果找到结果，滚动到顶部以便查看
+                    window.scrollTo(0, 0);
+                }
+            }
+            // 清除搜索功能
+            // 清除搜索功能
+            function clearSearch() {
+                console.log("清除搜索");  // 添加调试信息
+                searchInput.value = '';
+                document.querySelectorAll('.card').forEach(card => {
+                    card.style.display = 'flex';
+                });
+            }
+            // 显示状态信息
+            function showStatus(message, type = "") {
+                statusElement.textContent = message;
+                statusElement.className = "status visible " + type;
+                
+                // 3秒后自动清除状态
+                setTimeout(() => {
+                    statusElement.classList.remove('visible');
+                }, 3000);
+            }
+            
+            // 应用振假名按钮点击事件
+            applyFuriganaButton.addEventListener('click', function() {
+                if (!mecabReady) {
+                    alert("MeCab尚未准备好，请稍候");
+                    return;
+                }
+                
+                // 启用振假名
+                furiganaEnabled = true;
+                
+                if (currentSectionId) {
+                    // 如果当前正在查看章节，则切换到带假名版本
+                    if (processedContent[currentSectionId]) {
+                        detailContent.innerHTML = processedContent[currentSectionId];
+                        mecabStatusElement.textContent = "MeCab: 已显示振假名";
+                    } else {
+                        // 如果没有处理过，则处理当前章节
+                        applyFuriganaToCurrentSection();
+                    }
+                } else {
+                    mecabStatusElement.textContent = "MeCab: 振假名已启用，请选择章节";
+                }
+            });
+            
+            // 重置振假名按钮点击事件
+            resetFuriganaButton.addEventListener('click', function() {
+                // 禁用振假名
+                furiganaEnabled = false;
+                
+                if (currentSectionId) {
+                    // 显示原始内容
+                    detailContent.innerHTML = originalContent[currentSectionId];
+                    mecabStatusElement.textContent = "MeCab: 已切换到原始内容";
+                } else {
+                    mecabStatusElement.textContent = "MeCab: 振假名已禁用，请选择章节";
+                }
+            });
+            
+            // 显示章节内容
+            function showSection(sectionId) {
+                const section = document.getElementById(sectionId);
+                if (!section) {
+                    console.error('找不到章节:', sectionId);
+                    return;
+                }
+                
+                // 保存当前章节ID
+                currentSectionId = sectionId;
+                
+                // 设置标题
+                detailTitle.textContent = section.querySelector('h2').textContent;
+                
+                // 根据振假名状态决定显示哪个版本的内容
+                if (furiganaEnabled && processedContent[sectionId]) {
+                    // 如果启用振假名并且有处理后的内容，则使用处理后的内容
+                    detailContent.innerHTML = processedContent[sectionId];
+                } else {
+                    // 否则使用原始内容
+                    detailContent.innerHTML = originalContent[sectionId];
+                }
+                
+                // 显示详细视图，隐藏卡片视图
+                cardView.style.display = 'none';
+                detailView.style.display = 'block';
+                detailView.classList.add('active');
+                
+                // 滚动到顶部
+                window.scrollTo(0, 0);
+            }
+            
+            // 将章节内容应用振假名
+            // 将章节内容应用振假名
+            function applyFuriganaToCurrentSection() {
+                if (!currentSectionId || !mecabReady) return;
+                
+                // 重要：先重置为原始内容，防止重复应用振假名
+                detailContent.innerHTML = originalContent[currentSectionId];
+                
+                const useHiragana = useHiraganaCheckbox.checked;
+                const annotateAll = annotateAllCheckbox.checked;
+                
+                // 获取文本内容
+                const textNodes = getTextNodes(detailContent);
+                
+                // 遍历文本节点
+                textNodes.forEach(node => {
+                    const text = node.nodeValue.trim();
+                    if (text) {
+                        try {
+                            // 使用MeCab分析文本
+                            const analysisResults = Mecab.query(text);
+                            
+                            // 生成带振假名的HTML
+                            const html = generateFuriganaHTML(analysisResults, useHiragana, annotateAll);
+                            
+                            // 创建临时元素
+                            const span = document.createElement('span');
+                            span.innerHTML = html;
+                            
+                            // 替换文本节点
+                            node.parentNode.replaceChild(span, node);
+                        } catch (error) {
+                            console.error("分析错误:", error, "文本:", text);
+                        }
+                    }
+                });
+                
+                // 保存处理后的内容
+                processedContent[currentSectionId] = detailContent.innerHTML;
+                
+                mecabStatusElement.textContent = "MeCab: 振假名应用完成";
+            }
+            // 加强removeRubyTags函数，确保完全清除所有振假名标签
+            function removeRubyTags(html) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                
+                // 循环移除所有ruby标签直到没有任何ruby标签
+                let rubyElements;
+                while ((rubyElements = tempDiv.querySelectorAll('ruby')).length > 0) {
+                    rubyElements.forEach(ruby => {
+                        // 获取主要文本内容
+                        let originalText = '';
+                        for (const node of ruby.childNodes) {
+                            if (node.nodeType === Node.TEXT_NODE) {
+                                originalText += node.nodeValue;
+                            } else if (node.nodeName !== 'RT' && node.nodeName !== 'RP') {
+                                originalText += node.textContent;
+                            }
+                        }
+                        
+                        const textNode = document.createTextNode(originalText);
+                        ruby.parentNode.replaceChild(textNode, ruby);
+                    });
+                }
+                
+                // 移除所有可能残留的rt和rp标签
+                tempDiv.querySelectorAll('rt, rp').forEach(node => node.remove());
+                
+                return tempDiv.innerHTML;
+            }
+            // 获取元素中的文本节点
+            // 获取元素中的文本节点
+            function getTextNodes(element) {
+                const textNodes = [];
+                const treeWalker = document.createTreeWalker(
+                    element,
+                    NodeFilter.SHOW_TEXT,
+                    { acceptNode: function(node) { 
+                        // 检查该节点或其任何祖先是否在ruby元素内
+                        let parent = node.parentNode;
+                        while (parent) {
+                            if (parent.tagName === 'RUBY' || parent.tagName === 'RT' || 
+                                parent.tagName === 'CODE') {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            parent = parent.parentNode;
+                        }
+                        
+                        // 排除空文本
+                        if (!node.nodeValue.trim()) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        
+                        return NodeFilter.FILTER_ACCEPT;
+                    }},
+                    false
+                );
+                
+                let currentNode;
+                while (currentNode = treeWalker.nextNode()) {
+                    textNodes.push(currentNode);
+                }
+                
+                return textNodes;
+            }
+            
+            // 生成带振假名的HTML
+            function generateFuriganaHTML(analysisResults, useHiragana, annotateAll) {
+                if (!analysisResults || analysisResults.length === 0) {
+                    return "";
+                }
+                
+                let html = '';
+                
+                for (const token of analysisResults) {
+                    // 适配不同的属性名
+                    const surface = token.word || token.surface || "";
+                    let reading = token.reading || "";
+                    
+                    // 如果有片假名读音且选择了平假名，则转换为平假名
+                    if (reading && useHiragana) {
+                        reading = katakanaToHiragana(reading);
+                    }
+                    
+                    // 检查是否需要添加振假名
+                    const hasKanji = /[\u4e00-\u9faf]/.test(surface);
+                    const needsFurigana = (hasKanji || annotateAll) && reading && surface !== reading;
+                    
+                    // 添加带振假名的HTML
+                    if (needsFurigana) {
+                        html += "<ruby>" + surface + "<rt>" + reading + "</rt></ruby>";
+                    } else {
+                        html += surface;
+                    }
+                }
+                
+                return html;
+            }
+            
+            // 片假名转平假名
+            function katakanaToHiragana(str) {
+                return str.replace(/[\u30a1-\u30f6]/g, function(match) {
+                    const chr = match.charCodeAt(0) - 0x60;
+                    return String.fromCharCode(chr);
+                });
+            }
+            
+            // 检查选项变更并重新处理内容
+            useHiraganaCheckbox.addEventListener('change', async function() {
+                if (mecabReady) {
+                    // 当选项改变时，重新处理所有内容
+                    await preprocessAllSections();
+                    
+                    // 如果当前在查看章节且振假名已启用，则更新显示
+                    if (currentSectionId && furiganaEnabled) {
+                        detailContent.innerHTML = processedContent[currentSectionId];
+                    }
+                    
+                    mecabStatusElement.textContent = "MeCab: 已更新振假名设置";
+                }
+            });
+            
+            annotateAllCheckbox.addEventListener('change', async function() {
+                if (mecabReady) {
+                    // 当选项改变时，重新处理所有内容
+                    await preprocessAllSections();
+                    
+                    // 如果当前在查看章节且振假名已启用，则更新显示
+                    if (currentSectionId && furiganaEnabled) {
+                        detailContent.innerHTML = processedContent[currentSectionId];
+                    }
+                    
+                    mecabStatusElement.textContent = "MeCab: 已更新振假名设置";
+                }
+            });
+            loadModifiedContent();
+            // 初始化MeCab
+            initMeCab();
+        });
+    </script>
 </body>
 </html>
