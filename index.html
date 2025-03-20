@@ -11,7 +11,114 @@
             padding: 0;
             box-sizing: border-box;
         }
+        /* 添加新章节按钮样式 */
+        .add-section-button {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            min-height: 150px;
+            flex: 1;
+            min-width: 280px;
+            max-width: calc(50% - 20px);
+            transition: background-color 0.3s;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
 
+        .add-section-button:hover {
+            background-color: #3d8b40;
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .add-section-button span {
+            font-size: 32px;
+            margin-right: 10px;
+        }
+
+        /* 模态框样式 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background-color: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal h2 {
+            margin-bottom: 20px;
+            color: #1565c0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 16px;
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .modal-buttons .cancel-btn {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .modal-buttons .save-btn {
+            background-color: #4a90e2;
+            color: white;
+        }
         body {
             font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', Meiryo, sans-serif;
             line-height: 1.8;
@@ -142,8 +249,7 @@
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            height: auto;
-            min-height: 150px;
+            height: 100vh; /* 修改为100vh，使卡片高度等于视口高度 */
             flex: 1;
             min-width: 280px;
             max-width: calc(50% - 20px);
@@ -157,11 +263,44 @@
         .card-content {
             padding: 15px;
             flex-grow: 1;
-            overflow: visible;
+            overflow-y: auto; /* 启用垂直滚动 */
             display: flex;
             flex-direction: column;
+            /* 添加自定义滚动条样式 */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+        }
+        /* 为WebKit浏览器(Chrome, Safari)添加自定义滚动条样式 */
+        .card-content::-webkit-scrollbar {
+            width: 6px;
         }
 
+        .card-content::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+
+        .card-content::-webkit-scrollbar-track {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        /* 添加滚动提示效果 */
+        .card-content::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: linear-gradient(to top, rgba(255, 255, 255, 0.9), transparent);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .card-content.scrollable::after {
+            opacity: 1;
+        }
         .card-content h3 {
             margin-bottom: 8px;
             color: #1565c0;
@@ -553,6 +692,9 @@
                     </div>
                     <div class="card-title">実践例</div>
                 </div>
+                <button class="add-section-button" id="add-section-button">
+                    <span>+</span> 新しい章を追加
+                </button>
             </div>
             
             <!-- 详细内容视图 (初始隐藏) -->
@@ -572,7 +714,26 @@
             </div>
         </main>
     </div>
-
+    <!-- 添加新章节的模态框 -->
+    <div class="modal-overlay" id="add-section-modal">
+        <div class="modal">
+            <h2>新しい章を追加</h2>
+            <form id="add-section-form">
+                <div class="form-group">
+                    <label for="section-title">章のタイトル</label>
+                    <input type="text" id="section-title" placeholder="例：第五章：応用技術の高度化" required>
+                </div>
+                <div class="form-group">
+                    <label for="section-content">章の内容 (HTMLタグ使用可能)</label>
+                    <textarea id="section-content" placeholder="<p>章の内容をここに入力してください。</p>" required></textarea>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="cancel-btn" id="modal-cancel-btn">キャンセル</button>
+                    <button type="submit" class="save-btn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <!-- 原始内容数据 -->
     <div id="content-data" style="display:none;">
         <div id="section1">
@@ -656,8 +817,22 @@ function れい() {
         // 搜索相关的DOM元素
         const searchInput = document.getElementById('search-input');
         const searchButton = document.getElementById('search-button');
-
-
+        // 添加新章节相关元素
+        const addSectionButton = document.getElementById('add-section-button');
+        const addSectionModal = document.getElementById('add-section-modal');
+        const addSectionForm = document.getElementById('add-section-form');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const sectionTitleInput = document.getElementById('section-title');
+        const sectionContentInput = document.getElementById('section-content');
+        const tocList = document.getElementById('toc-list');
+        const contentDataDiv = document.getElementById('content-data');
+        
+            // 初始化现有卡片的滚动指示器
+            document.querySelectorAll('.card-content').forEach(cardContent => {
+                if (cardContent.scrollHeight > cardContent.clientHeight) {
+                    cardContent.classList.add('scrollable');
+                }
+            });
             // 存储编辑前的内容
             let beforeEditContent = '';
 
@@ -813,7 +988,94 @@ function れい() {
                 
                 mecabStatusElement.textContent = "MeCab: 内容预处理完成";
             }
-                        
+            // 添加新章节按钮点击事件
+            addSectionButton.addEventListener('click', function() {
+                // 重置表单
+                addSectionForm.reset();
+                // 显示模态框
+                addSectionModal.classList.add('active');
+            });
+            // 表单提交事件
+            addSectionForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                // 获取表单数据
+                const title = sectionTitleInput.value.trim();
+                let content = sectionContentInput.value.trim();
+                
+                // 如果内容中没有包含h2标题，则自动添加
+                if (!content.includes('<h2>')) {
+                    content = `<h2>${title}</h2>\n${content}`;
+                }
+                
+                // 生成唯一ID
+                const timestamp = new Date().getTime();
+                const sectionId = `section${timestamp}`;
+                
+                // 更新目录
+                const liElement = document.createElement('li');
+                liElement.setAttribute('data-target', sectionId);
+                liElement.innerHTML = `<a href="#${sectionId}">${title}</a>`;
+                tocList.appendChild(liElement);
+                
+                // 添加事件监听
+                liElement.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetSectionId = this.getAttribute('data-target');
+                    showSection(targetSectionId);
+                    
+                    // 高亮当前目录项
+                    document.querySelectorAll('#toc-list li').forEach(function(li) {
+                        li.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+                
+                // 添加新的内容区域
+                const sectionDiv = document.createElement('div');
+                sectionDiv.id = sectionId;
+                sectionDiv.innerHTML = content;
+                contentDataDiv.appendChild(sectionDiv);
+                
+                // 将新内容添加到原始内容对象中
+                originalContent[sectionId] = content;
+                
+                // 创建新卡片
+                createCardForSection(sectionId, content);
+                
+                // 如果振假名功能已启用，则处理新内容
+                if (mecabReady) {
+                    preprocessSection(sectionId).then(() => {
+                        console.log('新章节振假名处理完成');
+                    });
+                }
+                
+                // 保存到本地存储
+                try {
+                    modifiedContent[sectionId] = content;
+                    localStorage.setItem('modifiedSections', JSON.stringify(modifiedContent));
+                } catch (error) {
+                    console.error("保存新章节内容错误:", error);
+                    showStatus("内容の保存中にエラーが発生しました", "error");
+                }
+                
+                // 关闭模态框
+                addSectionModal.classList.remove('active');
+                
+                // 显示成功状态
+                showStatus("新しい章が追加されました", "success");
+            });
+            // 模态框取消按钮点击事件
+            modalCancelBtn.addEventListener('click', function() {
+                addSectionModal.classList.remove('active');
+            });
+            
+            // 点击模态框外部关闭模态框
+            addSectionModal.addEventListener('click', function(event) {
+                if (event.target === addSectionModal) {
+                    addSectionModal.classList.remove('active');
+                }
+            });
             // 卡片点击事件
             document.querySelectorAll('.card').forEach(function(card) {
                 card.addEventListener('click', function() {
@@ -953,6 +1215,33 @@ function れい() {
                 
                 showStatus("編集がキャンセルされました", "info");
             });
+            // 创建新章节的卡片
+            function createCardForSection(sectionId, content) {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'card';
+                cardDiv.setAttribute('data-section', sectionId);
+                
+                // 创建卡片内容
+                cardDiv.innerHTML = `
+                    <div class="card-content">
+                        <h3>Loading...</h3>
+                        <p>Loading...</p>
+                    </div>
+                    <div class="card-title">Loading...</div>
+                `;
+                
+                // 添加点击事件
+                cardDiv.addEventListener('click', function() {
+                    const clickedSectionId = this.getAttribute('data-section');
+                    showSection(clickedSectionId);
+                });
+                
+                // 插入到添加按钮之前
+                cardView.insertBefore(cardDiv, addSectionButton);
+                
+                // 更新卡片预览
+                updateCardPreview(sectionId, content);
+            }
             // 新增：更新预览卡片的函数
             // 新增：更新预览卡片的函数
             function updateCardPreview(sectionId, content) {
@@ -999,11 +1288,6 @@ function れい() {
                 // 获取所有段落和其他元素
                 const contentNodes = Array.from(tempDiv.children).filter(node => node.tagName !== 'H2');
                 
-                // 预览内容的最大高度限制(字符数)
-                const maxLength = 5500;
-                let totalLength = 0;
-                let hasMore = false;
-                
                 // 遍历并添加内容元素，保留格式
                 for (let i = 0; i < contentNodes.length; i++) {
                     const node = contentNodes[i];
@@ -1011,36 +1295,24 @@ function れい() {
                     // 复制节点以保留格式
                     const clonedNode = node.cloneNode(true);
                     
-                    // 检查是否已达到最大长度
-                    totalLength += clonedNode.textContent.length;
-                    if (totalLength > maxLength) {
-                        hasMore = true;
-                        // 如果当前节点是段落，可以尝试截断段落而不是完全跳过
-                        if (clonedNode.tagName === 'P') {
-                            const remainingLength = maxLength - (totalLength - clonedNode.textContent.length);
-                            if (remainingLength > 20) { // 确保至少显示一部分内容
-                                clonedNode.textContent = clonedNode.textContent.substring(0, remainingLength) + '...';
-                                fragment.appendChild(clonedNode);
-                            }
-                        }
-                        break;
-                    }
-                    
                     // 添加到文档片段
                     fragment.appendChild(clonedNode);
                 }
                 
-                // 如果内容被截断且最后一个元素不是显示"更多"的元素，添加一个
-                if (hasMore && fragment.lastChild && fragment.lastChild.textContent.indexOf('...') === -1) {
-                    const moreEl = document.createElement('div');
-                    moreEl.textContent = '...';
-                    moreEl.style.fontStyle = 'italic';
-                    moreEl.style.color = '#888';
-                    fragment.appendChild(moreEl);
-                }
-                
                 // 将处理后的内容添加到卡片
                 cardContentP.appendChild(fragment);
+                
+                // 检查内容是否需要滚动
+                const cardContent = card.querySelector('.card-content');
+                
+                // 使用setTimeout确保DOM渲染完成后再检查滚动
+                setTimeout(() => {
+                    if (cardContent.scrollHeight > cardContent.clientHeight) {
+                        cardContent.classList.add('scrollable');
+                    } else {
+                        cardContent.classList.remove('scrollable');
+                    }
+                }, 0);
                 
                 console.log('更新卡片预览完成');
             }
